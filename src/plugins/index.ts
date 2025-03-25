@@ -1,0 +1,1 @@
+export { TMDBScrapePlugin } from './tmdb';
