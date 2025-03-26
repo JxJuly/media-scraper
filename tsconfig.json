@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
     "baseUrl": "./src",
     "outDir": "./libs",
-    "declaration": true
-  }
+    "declaration": true,
+    "moduleResolution": "bundler",
+    "esModuleInterop": true
+  },
+  "include": ["./src"]
 }

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/release-it@18/schema/release-it.json",
+  "plugins": {
+    "release-it-pnpm": {},
+    "@release-it/conventional-changelog": {
+      "infile": "CHANGELOG.md",
+      "header": "# Changelog | 变更日志",
+      "preset": {
+        "name": "conventionalcommits",
+        "types": [
+          { "type": "feat", "section": "🌟 Features | 新功能"},
+          { "type": "fix", "section": "🐛 Bug Fixes | Bug 修复"},
+          { "type": "ci", "section": "🚀 Tool | 工具升级"}
+        ]
+      }
+    }
+  },
+  "github": {
+    "release": true
+  }
+}
