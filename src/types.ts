@@ -1,4 +1,9 @@
 /**
+ * 媒体类型
+ */
+export type MetaType = 'movie' | 'series' | 'episode';
+
+/**
  * 通用的元数据
  */
 interface CommonMetaData {
@@ -28,7 +33,7 @@ interface CommonMetaData {
   /** 编剧 */
   credits?: string;
   /** 制作公司 */
-  studio?: string;
+  studio?: string[];
   tag?: string;
   [key: string]: any;
 }
@@ -53,7 +58,17 @@ export interface EpisodeMetaData {
   };
 }
 
-export type MetaData = MovieMetaData | EpisodeMetaData;
+/**
+ * Series 元数据
+ */
+export interface SeriesMetaData {
+  tvshow: CommonMetaData & {
+    season?: number;
+    episode?: number;
+  };
+}
+
+export type MetaData = MovieMetaData | EpisodeMetaData | SeriesMetaData;
 
 export type ErrorHandle<T> = [T] | [undefined, string];
 

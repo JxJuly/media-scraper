@@ -4,7 +4,14 @@ import axios from 'axios';
 
 import { logger, errorHandle } from '../utils';
 
-import type { ScrapePlugin, ErrorHandle, MovieMetaData, EpisodeMetaData } from '../types';
+import type {
+  ScrapePlugin,
+  ErrorHandle,
+  MetaData,
+  MovieMetaData,
+  EpisodeMetaData,
+  SeriesMetaData,
+} from '../types';
 import type { AxiosInstance } from 'axios';
 
 interface TMDBScrapePluginConfig {
@@ -71,7 +78,10 @@ class TMDBScrapePlugin implements ScrapePlugin {
     });
   }
 
-  search(filePath: string): Promise<ErrorHandle<MovieMetaData | EpisodeMetaData>> {
+  search(filePath: string): Promise<ErrorHandle<MetaData>> {
+    if (this.isSeries(filePath)) {
+      return this.searchSeries(filePath);
+    }
     return this.isTV(filePath) ? this.searchEpisode(filePath) : this.searchMovie(filePath);
   }
 
@@ -81,6 +91,15 @@ class TMDBScrapePlugin implements ScrapePlugin {
    */
   isTV(filePath: string): boolean {
     return !!matchers.find((match) => filePath.match(match.reg));
+  }
+
+  /**
+   * 是否是剧集文件夹
+   * 姑且通过是否有后缀来判断，也可以实际去判断是否是文件夹，但不想太多入侵
+   * @param filePath
+   */
+  isSeries(filePath: string) {
+    return !path.parse(filePath).ext;
   }
 
   async searchMovie(filePath: string): Promise<ErrorHandle<MovieMetaData>> {
@@ -153,6 +172,36 @@ class TMDBScrapePlugin implements ScrapePlugin {
         tmdbid: data.id,
         season: data.season_number,
         episode: data.episode_number,
+      },
+    };
+    return [metaData];
+  }
+  async searchSeries(filePath: string): Promise<ErrorHandle<SeriesMetaData>> {
+    const name = path.parse(filePath).name.normalize('NFC');
+    logger.info(`开始刮削 Series`, `name: ${name}`, `filePath: ${filePath}`);
+    const { data: searchList } = await this.fetch.get('search/tv', {
+      params: {
+        query: name,
+        include_adult: this.config.isAdult,
+        page: 1,
+      },
+    });
+    if (!searchList.results.length) {
+      return errorHandle(`搜索不到 Series 资源：${name}`);
+    }
+    const series = searchList.results[0];
+    const { data } = await this.fetch.get(`tv/${series.id}`);
+    const metaData: SeriesMetaData = {
+      tvshow: {
+        title: data.name,
+        originaltitle: data.original_name,
+        runtime: data.runtime,
+        rating: data.vote_average,
+        premiered: data.first_air_date,
+        thumb: this.getTMDBImageUrl(data.poster_path),
+        studio: data?.production_companies.map((i) => i.name),
+        plot: data.overview,
+        tmdbid: data.id,
       },
     };
     return [metaData];

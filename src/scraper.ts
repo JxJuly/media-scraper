@@ -7,7 +7,7 @@ import { parseStringPromise, Builder } from 'xml2js';
 
 import { errorHandle, logger } from './utils';
 
-import type { ErrorHandle, ScrapePlugin, MovieMetaData, EpisodeMetaData, MetaData } from './types';
+import type { ErrorHandle, ScrapePlugin, MovieMetaData, SeriesMetaData, MetaData, MetaType } from './types';
 
 interface ScraperConfig {
   /**
@@ -80,10 +80,7 @@ class Scraper {
     this.saveMetaData(localMetaDataPath, nextMetaData);
     const thumb = this.getMetaDataThumb(nextMetaData);
     if (thumb) {
-      const localPostImagePath = this.getPostImagePath(
-        filePath,
-        this.isMovieMetaData(nextMetaData) ? 'movie' : 'episode'
-      );
+      const localPostImagePath = this.getPostImagePath(filePath, this.getMetaDataType(nextMetaData));
       await this.savePostImage(localPostImagePath, thumb);
     }
   }
@@ -142,24 +139,45 @@ class Scraper {
     parsed.ext = META_DATA_EXTENSION;
     return path.format(parsed);
   }
-  getPostImagePath(filePath: string, type: 'movie' | 'episode') {
-    const parsed = path.parse(filePath);
+  getPostImagePath(filePath: string, type: MetaType) {
     if (type === 'movie') {
+      const parsed = path.parse(filePath);
       parsed.base = MOVIE_POSTER_IMAGE;
       parsed.ext = POSTER_IMAGE_EXTENSION;
-    } else {
-      parsed.base = parsed.name + '-thumb' + POSTER_IMAGE_EXTENSION;
-      parsed.ext = POSTER_IMAGE_EXTENSION;
+      return path.format(parsed);
     }
+
+    if (type === 'series') {
+      return path.resolve(filePath, MOVIE_POSTER_IMAGE);
+    }
+
+    const parsed = path.parse(filePath);
+    parsed.base = parsed.name + '-thumb' + POSTER_IMAGE_EXTENSION;
+    parsed.ext = POSTER_IMAGE_EXTENSION;
     return path.format(parsed);
   }
 
+  getMetaDataType(metaData: MetaData): MetaType {
+    if (this.isMovieMetaData(metaData)) {
+      return 'movie';
+    }
+    if (this.isSeriesMetaData(metaData)) {
+      return 'series';
+    }
+    return 'episode';
+  }
   isMovieMetaData(metaData: MetaData): metaData is MovieMetaData {
     return !!(metaData as MovieMetaData).movie;
+  }
+  isSeriesMetaData(metaData: MetaData): metaData is SeriesMetaData {
+    return !!(metaData as SeriesMetaData).tvshow;
   }
   getMetaDataThumb(metaData: MetaData) {
     if (this.isMovieMetaData(metaData)) {
       return metaData.movie.thumb;
+    }
+    if (this.isSeriesMetaData(metaData)) {
+      return metaData.tvshow.thumb;
     }
     return metaData.episodedetails.thumb;
   }
