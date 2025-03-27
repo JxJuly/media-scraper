@@ -7,10 +7,18 @@
     "libs",
     "README.md"
   ],
-  "main": "./libs/index.js",
+  "main": "./libs/scraper.cjs",
+  "module": "./libs/scraper.js",
   "types": "./libs/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./libs/scraper.cjs",
+      "import": "./libs/scraper.js",
+      "types": "./libs/index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "rm -rf libs && tsc",
+    "build": "vite build",
     "test": "vitest run",
     "release": "release-it -ci"
   },
@@ -30,6 +38,8 @@
     "release-it": "^18.1.2",
     "release-it-pnpm": "^4.6.4",
     "typescript": "^5.8.2",
+    "vite": "^6.2.3",
+    "vite-plugin-dts": "^4.5.3",
     "vitest": "^3.0.9"
   }
 }
