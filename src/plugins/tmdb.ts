@@ -51,7 +51,7 @@ export const matchers: Matcher[] = [
     },
   },
   {
-    reg: /.+\/([^/]*\/.*episode(\d+))/,
+    reg: /.+\/([^/]*)\/.*episode(\d+)/,
     compute: (match) => {
       return {
         title: match[1],

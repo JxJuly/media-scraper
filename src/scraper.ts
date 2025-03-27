@@ -34,6 +34,7 @@ const DEFAULT_CONFIG: Omit<ScraperConfig, 'plugins'> = {
 const META_DATA_EXTENSION = '.nfo';
 const POSTER_IMAGE_EXTENSION = '.jpg';
 const MOVIE_POSTER_IMAGE = 'poster.jpg';
+const SERIES_META_DATA_NAME = 'tvshow.nfo';
 
 const simgleMerge = <T>(a: T, b: T) => {
   return mergeWith({} as T, a, b, (objValue, srcValue) => {
@@ -116,13 +117,13 @@ class Scraper {
       logger.info(`检测到封面图已经存在且刮削模式为 ${this.config.mode}，跳过图片下载`);
       return;
     }
-    logger.info('开始下载封面图');
+    logger.info(`开始下载封面图: ${url}`);
     const response = await axios.get(url, { responseType: 'stream' });
     const writer = fs.createWriteStream(localPostImagePath);
     response.data.pipe(writer);
     return new Promise((resolve, reject) => {
       writer.on('finish', () => {
-        logger.info('封面图下载完成！');
+        logger.info('封面图下载完成！', localPostImagePath);
         resolve(localPostImagePath);
       });
       writer.on('error', (err) => {
@@ -135,6 +136,9 @@ class Scraper {
 
   getMetaDataPath(filePath: string) {
     const parsed = path.parse(filePath);
+    if (!parsed.ext) {
+      return path.resolve(filePath, SERIES_META_DATA_NAME);
+    }
     parsed.base = parsed.name + META_DATA_EXTENSION;
     parsed.ext = META_DATA_EXTENSION;
     return path.format(parsed);

@@ -7,16 +7,16 @@
     "libs",
     "README.md"
   ],
-  "main": "./libs/scraper.cjs",
-  "module": "./libs/scraper.js",
-  "types": "./libs/index.d.ts",
   "exports": {
     ".": {
+      "types": "./libs/index.d.ts",
       "require": "./libs/scraper.cjs",
-      "import": "./libs/scraper.js",
-      "types": "./libs/index.d.ts"
+      "import": "./libs/scraper.js"
     }
   },
+  "types": "./libs/index.d.ts",
+  "main": "./libs/scraper.cjs",
+  "module": "./libs/scraper.js",
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
