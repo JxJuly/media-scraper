@@ -1,6 +1,7 @@
 import path from 'path';
 
 import axios from 'axios';
+import glob from 'fast-glob';
 
 import { logger, errorHandle } from '../utils';
 
@@ -30,33 +31,42 @@ interface MatchComputeResult {
   season: string;
   /** 集号 */
   episode: string;
+  /** 剧集目录 */
+  seriesPath: string;
+  /** 季目录 */
+  seasonPath?: string;
 }
 interface Matcher {
   reg: RegExp;
-  compute: (match: RegExpMatchArray) => MatchComputeResult;
+  compute: (match: RegExpMatchArray, filePath: string) => MatchComputeResult;
 }
 
+const SUPPORT_MEDIA_FILE_EXTENSIONS = ['.mp4', '.mkv'];
 /**
  * 枚举匹配器
  */
 export const matchers: Matcher[] = [
   {
     reg: /.+\/([^/]+\/season(\d+)\/.*episode(\d+))/,
-    compute: (match: RegExpMatchArray) => {
+    compute: (match: RegExpMatchArray, filePath: string) => {
+      const seasonPath = path.dirname(filePath);
       return {
         title: match[1],
         season: match[2] || '01',
         episode: match[3],
+        seriesPath: path.dirname(seasonPath),
+        seasonPath,
       };
     },
   },
   {
     reg: /.+\/([^/]*)\/.*episode(\d+)/,
-    compute: (match) => {
+    compute: (match: RegExpMatchArray, filePath: string) => {
       return {
         title: match[1],
         season: '01',
         episode: match[2],
+        seriesPath: path.dirname(filePath),
       };
     },
   },
@@ -78,11 +88,29 @@ class TMDBScrapePlugin implements ScrapePlugin {
     });
   }
 
-  search(filePath: string): Promise<ErrorHandle<MetaData>> {
+  public search(filePath: string): Promise<ErrorHandle<MetaData>> {
     if (this.isSeries(filePath)) {
       return this.searchSeries(filePath);
     }
     return this.isTV(filePath) ? this.searchEpisode(filePath) : this.searchMovie(filePath);
+  }
+
+  public async match(libarayPaths: string[]): ReturnType<ScrapePlugin['match']> {
+    const mediaPaths: string[] = [];
+    const patterns = libarayPaths.map(
+      (libarayPath) => `${libarayPath}/**/*{${SUPPORT_MEDIA_FILE_EXTENSIONS.join(',')}}`
+    );
+    const files = await glob(patterns, { dot: true, deep: Infinity });
+    mediaPaths.push(...files);
+    files.forEach((file) => {
+      const info = this.matchAndComputeAll(file);
+      if (!info) {
+        return;
+      }
+      mediaPaths.push(...[info.seriesPath, info.seasonPath].filter((i): i is string => !!i));
+    });
+    logger.info(`检索到的电影、剧集：\n`, mediaPaths.join('\n'));
+    return [mediaPaths];
   }
 
   /**
@@ -137,13 +165,7 @@ class TMDBScrapePlugin implements ScrapePlugin {
   }
   async searchEpisode(filePath: string): Promise<ErrorHandle<EpisodeMetaData>> {
     logger.info(`开始解析剧集 ${filePath}`);
-    const info = matchers.reduce<null | MatchComputeResult>((value, matcher) => {
-      if (!value) {
-        const match = filePath.match(matcher.reg);
-        return match ? matcher.compute(match) : null;
-      }
-      return value;
-    }, null);
+    const info = this.matchAndComputeAll(filePath);
     if (!info) {
       return errorHandle(`解析剧集的名称、季号或集数失败 ${filePath}`);
     }
@@ -205,6 +227,16 @@ class TMDBScrapePlugin implements ScrapePlugin {
       },
     };
     return [metaData];
+  }
+
+  private matchAndComputeAll(filePath: string): null | MatchComputeResult {
+    return matchers.reduce<null | MatchComputeResult>((value, matcher) => {
+      if (!value) {
+        const match = filePath.match(matcher.reg);
+        return match ? matcher.compute(match, filePath) : null;
+      }
+      return value;
+    }, null);
   }
 
   getTMDBImageUrl(path: string) {

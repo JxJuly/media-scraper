@@ -5,7 +5,7 @@ import axios from 'axios';
 import { mergeWith, noop } from 'lodash-es';
 import { parseStringPromise, Builder } from 'xml2js';
 
-import { errorHandle, logger } from './utils';
+import { errorHandle, logger, sleep } from './utils';
 
 import type { ErrorHandle, ScrapePlugin, MovieMetaData, SeriesMetaData, MetaData, MetaType } from './types';
 
@@ -60,11 +60,35 @@ class Scraper {
    * 运行刮削
    * @param filePath 文件完整的路径
    */
-  async run(filePath: string) {
+  public async run(filePath: string) {
     const plugin = this.config.plugins[0];
     if (!plugin) {
       return errorHandle(`请至少添加一个插件`);
     }
+    await this._run(filePath, plugin);
+  }
+
+  /**
+   * 指定资源库刮削
+   * @param libarayPaths
+   * @returns
+   */
+  public async match(libarayPaths: string[]) {
+    const plugin = this.config.plugins[0];
+    if (!plugin) {
+      return errorHandle(`请至少添加一个插件`);
+    }
+    const [files, error] = await plugin.match(libarayPaths);
+    if (error || !files) {
+      return errorHandle(error);
+    }
+    for (const file of files) {
+      await this._run(file, plugin);
+      await sleep(100);
+    }
+  }
+
+  private async _run(filePath: string, plugin: ScrapePlugin) {
     const localMetaDataPath = this.getMetaDataPath(filePath);
     const [localMetaData] = await this.loadMetaData(localMetaDataPath);
 

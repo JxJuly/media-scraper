@@ -84,4 +84,9 @@ export interface ScrapePlugin {
    * 刮削函数
    */
   search(filePath: string): Promise<ErrorHandle<MetaData>>;
+  /**
+   * 能够从给定目录找到符合插件刮削特征的路径
+   * @param libarayPaths 资源库地址
+   */
+  match(libarayPaths: string[]): Promise<ErrorHandle<string[]>>;
 }
