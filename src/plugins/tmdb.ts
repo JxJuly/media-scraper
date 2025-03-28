@@ -2,6 +2,7 @@ import path from 'path';
 
 import axios from 'axios';
 import glob from 'fast-glob';
+import { uniq } from 'lodash-es';
 
 import { logger, errorHandle } from '../utils';
 
@@ -110,7 +111,7 @@ class TMDBScrapePlugin implements ScrapePlugin {
       mediaPaths.push(info.seriesPath);
     });
     logger.info(`检索到的电影、剧集：\n`, mediaPaths.join('\n'));
-    return [mediaPaths];
+    return [uniq(mediaPaths)];
   }
 
   /**
@@ -132,7 +133,7 @@ class TMDBScrapePlugin implements ScrapePlugin {
 
   async searchMovie(filePath: string): Promise<ErrorHandle<MovieMetaData>> {
     const name = path.parse(filePath).name.normalize('NFC');
-    logger.info(`开始刮削电影`, `name: ${name}`, `filePath: ${filePath}`);
+    logger.info(`开始刮削 movie`, `name: ${name}`, `filePath: ${filePath}`);
     const { data: searchList } = await this.fetch.get('search/movie', {
       params: {
         query: name,
@@ -156,7 +157,7 @@ class TMDBScrapePlugin implements ScrapePlugin {
         rating: data.vote_average,
         plot: data.overview,
         thumb: this.getTMDBImageUrl(data.poster_path),
-        studio: data.production_companies?.[0]?.name,
+        studio: data?.production_companies.map((i) => i.name),
         tmdbid: data.id,
       },
     };
