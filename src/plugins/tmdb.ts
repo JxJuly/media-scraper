@@ -47,7 +47,7 @@ const SUPPORT_MEDIA_FILE_EXTENSIONS = ['.mp4', '.mkv'];
  */
 export const matchers: Matcher[] = [
   {
-    reg: /.+\/([^/]+\/season(\d+)\/.*episode(\d+))/,
+    reg: /.+\/([^/]+)\/season(\d+)\/.*episode(\d+)/,
     compute: (match: RegExpMatchArray, filePath: string) => {
       const seasonPath = path.dirname(filePath);
       return {
@@ -107,7 +107,7 @@ class TMDBScrapePlugin implements ScrapePlugin {
       if (!info) {
         return;
       }
-      mediaPaths.push(...[info.seriesPath, info.seasonPath].filter((i): i is string => !!i));
+      mediaPaths.push(info.seriesPath);
     });
     logger.info(`检索到的电影、剧集：\n`, mediaPaths.join('\n'));
     return [mediaPaths];
@@ -164,12 +164,12 @@ class TMDBScrapePlugin implements ScrapePlugin {
     return [metaData];
   }
   async searchEpisode(filePath: string): Promise<ErrorHandle<EpisodeMetaData>> {
-    logger.info(`开始解析剧集 ${filePath}`);
+    logger.info(`开始解析 episode: ${filePath}`);
     const info = this.matchAndComputeAll(filePath);
     if (!info) {
-      return errorHandle(`解析剧集的名称、季号或集数失败 ${filePath}`);
+      return errorHandle(`解析 episode 的名称、季号或集数失败 ${filePath}`);
     }
-    logger.info(`开始刮削剧集 ${info.title}-${info.season}-${info.episode}`);
+    logger.info(`开始刮削 episode: ${info.title}-${info.season}-${info.episode}`);
     const { data: searchList } = await this.fetch.get('search/tv', {
       params: {
         query: info.title.normalize('NFC'),
