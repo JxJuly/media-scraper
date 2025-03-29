@@ -110,8 +110,10 @@ class TMDBScrapePlugin implements ScrapePlugin {
       }
       mediaPaths.push(info.seriesPath);
     });
-    logger.info(`检索到的电影、剧集：\n`, mediaPaths.join('\n'));
-    return [uniq(mediaPaths)];
+
+    const uniqMediaPaths = uniq(mediaPaths);
+    logger.info(`检索到的电影、剧集：\n`, uniqMediaPaths.join('\n'));
+    return [uniqMediaPaths];
   }
 
   /**
