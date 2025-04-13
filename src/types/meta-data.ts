@@ -34,7 +34,10 @@ interface CommonMetaData {
   credits?: string;
   /** 制作公司 */
   studio?: string[];
-  tag?: string;
+  /** 标签 */
+  tag?: string[];
+  /** 分类 */
+  genre?: string[];
   [key: string]: any;
 }
 
@@ -68,25 +71,9 @@ export interface SeriesMetaData {
   };
 }
 
-export type MetaData = MovieMetaData | EpisodeMetaData | SeriesMetaData;
-
-export type ErrorHandle<T> = [T] | [undefined, string];
-
 /**
- * 插件接口
+ * series 本身不是一种媒体实体，所以真正在刮削过程中 series 会和 episode 混合存在
  */
-export interface ScrapePlugin {
-  /**
-   * 插件唯一标识
-   */
-  name: string;
-  /**
-   * 刮削函数
-   */
-  search(filePath: string): Promise<ErrorHandle<MetaData>>;
-  /**
-   * 能够从给定目录找到符合插件刮削特征的路径
-   * @param libarayPaths 资源库地址
-   */
-  match(libarayPaths: string[]): Promise<ErrorHandle<string[]>>;
-}
+export type EpisodeMetaDataWithSeries = EpisodeMetaData & SeriesMetaData;
+
+export type MetaData = MovieMetaData | EpisodeMetaData | SeriesMetaData | EpisodeMetaDataWithSeries;

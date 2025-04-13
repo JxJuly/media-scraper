@@ -1,3 +1,3 @@
 export { errorHandle } from './error-handle';
-export { logger } from './logger';
+export { logger, Logger } from './logger';
 export { sleep } from './sleep';

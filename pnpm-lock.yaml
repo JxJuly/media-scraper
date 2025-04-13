@@ -11,9 +11,6 @@ importers:
       axios:
         specifier: ^1.8.4
         version: 1.8.4
-      chalk:
-        specifier: ^5.4.1
-        version: 5.4.1
       cheerio:
         specifier: ^1.0.0
         version: 1.0.0

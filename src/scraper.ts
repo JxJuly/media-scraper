@@ -1,29 +1,33 @@
 import fs from 'fs';
-import path from 'path';
 
-import axios from 'axios';
-import { mergeWith, noop } from 'lodash-es';
-import { parseStringPromise, Builder } from 'xml2js';
+import { mergeWith, omit, pick } from 'lodash-es';
+import { Builder } from 'xml2js';
 
-import { errorHandle, logger, sleep } from './utils';
+import { Tool, Match } from './core';
+import { logger, sleep } from './utils';
 
-import type { ErrorHandle, ScrapePlugin, MovieMetaData, SeriesMetaData, MetaData, MetaType } from './types';
+import type { ScrapePlugin, MetaData, MatchInfo } from './types';
+
+interface UsePlugin {
+  use: ScrapePlugin;
+  pick?: string[];
+  omit?: string[];
+}
 
 interface ScraperConfig {
   /**
    * 运行的模式
    * cover：无论是否已有数据都直接覆盖
-   * skip：若已有数据则直接跳过刮削
    * merge：合并已有数据，新数据优先级更高
    * complete：若数据存在，补全已有数据
    */
-  mode: 'cover' | 'skip' | 'merge' | 'complete';
+  mode: 'cover' | 'merge' | 'complete';
   /** 是否要下载刮削的图片 */
   downloadImage: boolean;
   /**
    * 使用的插件，优先级按照先后顺序决定
    */
-  plugins: ScrapePlugin[];
+  plugins: UsePlugin[];
 }
 
 const DEFAULT_CONFIG: Omit<ScraperConfig, 'plugins'> = {
@@ -31,13 +35,21 @@ const DEFAULT_CONFIG: Omit<ScraperConfig, 'plugins'> = {
   downloadImage: false,
 };
 
-const META_DATA_EXTENSION = '.nfo';
-const POSTER_IMAGE_EXTENSION = '.jpg';
-const MOVIE_POSTER_IMAGE = 'poster.jpg';
-const SERIES_META_DATA_NAME = 'tvshow.nfo';
+const isEmpty = (v: any) => {
+  if (v === undefined) {
+    return true;
+  }
+  if (Array.isArray(v)) {
+    return !!v.length;
+  }
+  return false;
+};
 
 const simgleMerge = <T>(a: T, b: T) => {
   return mergeWith({} as T, a, b, (objValue, srcValue) => {
+    if (isEmpty(srcValue)) {
+      return objValue;
+    }
     // 数组无需 merge
     if (Array.isArray(objValue)) {
       return srcValue;
@@ -49,65 +61,11 @@ class Scraper {
   config: ScraperConfig;
   builder = new Builder();
 
-  constructor(custom: Partial<Omit<ScraperConfig, 'plugins'>> & { plugins: ScrapePlugin[] }) {
+  constructor(custom: Partial<Omit<ScraperConfig, 'plugins'>> & { plugins: UsePlugin[] }) {
     this.config = {
       ...DEFAULT_CONFIG,
       ...custom,
     };
-  }
-
-  /**
-   * 运行刮削
-   * @param filePath 文件完整的路径
-   */
-  public async run(filePath: string) {
-    const plugin = this.config.plugins[0];
-    if (!plugin) {
-      return errorHandle(`请至少添加一个插件`);
-    }
-    await this._run(filePath, plugin);
-  }
-
-  /**
-   * 指定资源库刮削
-   * @param libarayPaths
-   * @returns
-   */
-  public async match(libarayPaths: string[]) {
-    const plugin = this.config.plugins[0];
-    if (!plugin) {
-      return errorHandle(`请至少添加一个插件`);
-    }
-    const [files, error] = await plugin.match(libarayPaths);
-    if (error || !files) {
-      return errorHandle(error);
-    }
-    for (const file of files) {
-      await this._run(file, plugin);
-      await sleep(100);
-    }
-  }
-
-  private async _run(filePath: string, plugin: ScrapePlugin) {
-    const localMetaDataPath = this.getMetaDataPath(filePath);
-    const [localMetaData] = await this.loadMetaData(localMetaDataPath);
-
-    // 本地已经存在元数据，并且模式为 skip 则直接跳过
-    if (this.config.mode === 'skip' && localMetaData) {
-      return [localMetaData];
-    }
-    const [metaData, error] = await plugin.search(filePath);
-    if (error || !metaData) {
-      return;
-    }
-
-    const nextMetaData = this.mergeMetaData(localMetaData, metaData);
-    this.saveMetaData(localMetaDataPath, nextMetaData);
-    const thumb = this.getMetaDataThumb(nextMetaData);
-    if (thumb) {
-      const localPostImagePath = this.getPostImagePath(filePath, this.getMetaDataType(nextMetaData));
-      await this.savePostImage(localPostImagePath, thumb);
-    }
   }
 
   mergeMetaData<T extends MetaData>(local: T | undefined, remote: T) {
@@ -124,90 +82,86 @@ class Scraper {
     return temp;
   }
 
-  async loadMetaData(metaDataPath: string): Promise<ErrorHandle<undefined | MetaData>> {
-    if (!fs.existsSync(metaDataPath)) {
-      return [undefined];
-    }
-    const metaData: MetaData = await parseStringPromise(fs.readFileSync(metaDataPath));
-    return [metaData];
-  }
-  saveMetaData<T>(metaDataPath: string, metaData: T) {
-    const str = this.builder.buildObject(metaData);
-    fs.writeFileSync(metaDataPath, str);
-  }
-  async savePostImage(localPostImagePath: string, url: string) {
-    const locaExist = fs.existsSync(localPostImagePath);
-    if (locaExist && (this.config.mode === 'complete' || this.config.mode === 'skip')) {
-      logger.info(`检测到封面图已经存在且刮削模式为 ${this.config.mode}，跳过图片下载`);
+  async saveMetaData<T extends MetaData>(info: MatchInfo, metaData: T) {
+    const tryWriteMetaDataFile = (path: string, data: any) => {
+      const str = this.builder.buildObject(data);
+      fs.writeFileSync(path, str);
+    };
+    if (info.type === 'movie' && Tool.isMovieMetaData(metaData)) {
+      tryWriteMetaDataFile(info.localMetaDataFilePath, metaData);
+      if (metaData.movie.thumb) {
+        await this.savePostImage(info.localPosterImagePath, metaData.movie.thumb);
+      }
       return;
     }
-    logger.info(`开始下载封面图: ${url}`);
-    const response = await axios.get(url, { responseType: 'stream' });
-    const writer = fs.createWriteStream(localPostImagePath);
-    response.data.pipe(writer);
-    return new Promise((resolve, reject) => {
-      writer.on('finish', () => {
-        logger.info('封面图下载完成！', localPostImagePath);
-        resolve(localPostImagePath);
+    if (info.type === 'episode' && Tool.isEpisodeMetaDataWithSeries(metaData)) {
+      tryWriteMetaDataFile(info.localMetaDataFilePath, omit(metaData, 'tvshow'));
+      tryWriteMetaDataFile(info.localSeriesMetaDataFilePath, omit(metaData, 'episodedetails'));
+      if (metaData.tvshow.thumb) {
+        await this.savePostImage(info.localPosterImagePath, metaData.tvshow.thumb);
+        await sleep(2000);
+      }
+      if (metaData.episodedetails.thumb) {
+        await this.savePostImage(info.localThumbImagePath, metaData.episodedetails.thumb);
+      }
+      return;
+    }
+    logger.error(`unkown type or metadata, info.type: ${info.type}`);
+  }
+  async savePostImage(localPostImagePath: string, url: string) {
+    if (!this.config.downloadImage) {
+      return;
+    }
+    const locaExist = fs.existsSync(localPostImagePath);
+    if (locaExist && this.config.mode === 'complete') {
+      logger.info(`image is existed and scrape mode is ${this.config.mode}, skip download`);
+      return;
+    }
+    logger.info(`start download: ${url}`);
+    const [, error] = await Tool.downloadImage(url, localPostImagePath);
+    if (error) {
+      logger.error('image download failed: ', error);
+    } else {
+      logger.info('image donwload finished!');
+    }
+  }
+
+  async run(filePath: string) {
+    const info = Match.getInfo(filePath);
+
+    const localMetaData = await Tool.getLocalMetaData(info);
+
+    const [metaData, error] = await this.scrape(info);
+    console.log(error, metaData);
+    if (error || !metaData) {
+      return;
+    }
+
+    const nextMetaData = this.mergeMetaData(localMetaData, metaData);
+    await this.saveMetaData(info, nextMetaData);
+  }
+
+  private async scrape(info: MatchInfo) {
+    let temp: undefined | MetaData = undefined;
+    for (const plugin of this.config.plugins) {
+      const [metaData, error] = await plugin.use.scrape(info);
+      if (error || !metaData) {
+        continue;
+      }
+      Object.entries(metaData).forEach(([key, value]) => {
+        if (temp === undefined) {
+          temp = {} as any;
+        }
+        if (plugin.pick) {
+          temp[key] = simgleMerge(temp[key], pick(value, plugin.pick));
+        } else if (plugin.omit) {
+          temp[key] = simgleMerge(temp[key], omit(value, plugin.omit));
+        } else {
+          temp[key] = simgleMerge(temp[key], value);
+        }
       });
-      writer.on('error', (err) => {
-        logger.error('封面图下载失败！', err);
-        fs.unlink(localPostImagePath, noop);
-        reject(err);
-      });
-    });
-  }
-
-  getMetaDataPath(filePath: string) {
-    const parsed = path.parse(filePath);
-    if (!parsed.ext) {
-      return path.resolve(filePath, SERIES_META_DATA_NAME);
     }
-    parsed.base = parsed.name + META_DATA_EXTENSION;
-    parsed.ext = META_DATA_EXTENSION;
-    return path.format(parsed);
-  }
-  getPostImagePath(filePath: string, type: MetaType) {
-    if (type === 'movie') {
-      const parsed = path.parse(filePath);
-      parsed.base = MOVIE_POSTER_IMAGE;
-      parsed.ext = POSTER_IMAGE_EXTENSION;
-      return path.format(parsed);
-    }
-
-    if (type === 'series') {
-      return path.resolve(filePath, MOVIE_POSTER_IMAGE);
-    }
-
-    const parsed = path.parse(filePath);
-    parsed.base = parsed.name + '-thumb' + POSTER_IMAGE_EXTENSION;
-    parsed.ext = POSTER_IMAGE_EXTENSION;
-    return path.format(parsed);
-  }
-
-  getMetaDataType(metaData: MetaData): MetaType {
-    if (this.isMovieMetaData(metaData)) {
-      return 'movie';
-    }
-    if (this.isSeriesMetaData(metaData)) {
-      return 'series';
-    }
-    return 'episode';
-  }
-  isMovieMetaData(metaData: MetaData): metaData is MovieMetaData {
-    return !!(metaData as MovieMetaData).movie;
-  }
-  isSeriesMetaData(metaData: MetaData): metaData is SeriesMetaData {
-    return !!(metaData as SeriesMetaData).tvshow;
-  }
-  getMetaDataThumb(metaData: MetaData) {
-    if (this.isMovieMetaData(metaData)) {
-      return metaData.movie.thumb;
-    }
-    if (this.isSeriesMetaData(metaData)) {
-      return metaData.tvshow.thumb;
-    }
-    return metaData.episodedetails.thumb;
+    return [temp];
   }
 }
 

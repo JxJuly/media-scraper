@@ -19,12 +19,11 @@
   "module": "./libs/scraper.js",
   "scripts": {
     "build": "vite build",
-    "test": "vitest run",
-    "release": "release-it -ci"
+    "release": "release-it -ci",
+    "test": "vitest"
   },
   "dependencies": {
     "axios": "^1.8.4",
-    "chalk": "^5.4.1",
     "cheerio": "^1.0.0",
     "fast-glob": "^3.3.3",
     "lodash-es": "^4.17.21",
