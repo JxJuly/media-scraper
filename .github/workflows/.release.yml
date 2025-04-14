@@ -1,0 +1,48 @@
+name: Release
+
+permissions:
+  contents: write
+  id-token: write
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      # 拉取代码
+      - name: git checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 配置 git 用户
+      - name: git config
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+      
+      # 安装 node 环境
+      - name: node config
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      # 安装依赖
+      - name: install
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: |
+            - args: [--frozen-lockfile]
+
+      - name: build
+        run: pnpm run build
+
+      - name: release
+        run: npx release-it --verbose
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

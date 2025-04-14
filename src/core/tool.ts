@@ -1,12 +1,9 @@
 import fs from 'fs';
 import { posix as path } from 'path';
 
-import axios from 'axios';
 import glob from 'fast-glob';
-import { noop, toString, uniq } from 'lodash-es';
+import { toString, uniq } from 'lodash-es';
 import { parseStringPromise } from 'xml2js';
-
-import { errorHandle } from '../utils';
 
 import type {
   EpisodeMetaData,
@@ -131,33 +128,6 @@ const getThumbImagePathByEpisodePath = (filePath: string) => {
   return path.format(parsed);
 };
 
-const downloadImage = async (url: string, localPath: string) => {
-  try {
-    const response = await axios.get(url, {
-      responseType: 'stream',
-      timeout: 10000,
-      headers: {
-        ['User-Agent']:
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0',
-      },
-    });
-    const writer = fs.createWriteStream(localPath);
-    response.data.pipe(writer);
-    await new Promise<void>((resolve, reject) => {
-      writer.on('finish', () => {
-        resolve();
-      });
-      writer.on('error', (err) => {
-        fs.unlink(localPath, noop);
-        reject(err);
-      });
-    });
-    return [url];
-  } catch (error) {
-    return errorHandle(error?.code || error);
-  }
-};
-
 const findMedia = async (libarayPaths: string[]) => {
   const patterns = libarayPaths.map((libarayPath) => {
     // 需要转义 "("、")"、"["、"]"
@@ -182,7 +152,6 @@ const Tool = {
   getSeriesMetaDataPathByEpisodePath,
   getPosterImagePathByMediaPath,
   getThumbImagePathByEpisodePath,
-  downloadImage,
   // temp
   getMetaDataFilePath,
 };

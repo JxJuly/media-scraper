@@ -14,7 +14,7 @@ const config: UserConfig = {
     },
     outDir: './libs',
     rollupOptions: {
-      external: ['path', 'fs', ...Object.keys(pkg.dependencies)],
+      external: ['path', 'fs', 'stream/promises', ...Object.keys(pkg.dependencies)],
     },
     minify: false,
   },

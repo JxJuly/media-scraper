@@ -3,10 +3,11 @@ import fs from 'fs';
 import { mergeWith, omit, pick } from 'lodash-es';
 import { Builder } from 'xml2js';
 
-import { Tool, Match } from './core';
-import { logger, sleep } from './utils';
+import { logger, sleep, downloadImage } from '../utils';
 
-import type { ScrapePlugin, MetaData, MatchInfo } from './types';
+import type { ScrapePlugin, MetaData, MatchInfo } from '../types';
+
+import { Tool, Match } from '.';
 
 interface UsePlugin {
   use: ScrapePlugin;
@@ -114,11 +115,11 @@ class Scraper {
     }
     const locaExist = fs.existsSync(localPostImagePath);
     if (locaExist && this.config.mode === 'complete') {
-      logger.info(`image is existed and scrape mode is ${this.config.mode}, skip download`);
+      logger.info(`image is existed and skip download`);
       return;
     }
     logger.info(`start download: ${url}`);
-    const [, error] = await Tool.downloadImage(url, localPostImagePath);
+    const [, error] = await downloadImage(url, localPostImagePath);
     if (error) {
       logger.error('image download failed: ', error);
     } else {
@@ -139,6 +140,7 @@ class Scraper {
 
     const nextMetaData = this.mergeMetaData(localMetaData, metaData);
     await this.saveMetaData(info, nextMetaData);
+    logger.info('done.');
   }
 
   private async scrape(info: MatchInfo) {
