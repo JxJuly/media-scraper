@@ -1,5 +1,11 @@
 # Changelog | 变更日志
 
+## [0.1.1](https://github.com/JxJuly/media-scraper/compare/0.1.0...0.1.1) (2025-04-15)
+
+### 🐛 Bug Fixes | Bug 修复
+
+* 移除对 release-it-pnpm 的依赖 ([f83af7e](https://github.com/JxJuly/media-scraper/commit/f83af7e07966590a9b82ae201159bef4b497da94))
+
 ## 0.1.0 (2025-04-15)
 
 ### ⚠ BREAKING CHANGES
