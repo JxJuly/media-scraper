@@ -1,6 +1,6 @@
 {
   "name": "@july_cm/media-scraper",
-  "private": "false",
+  "private": false,
   "publishConfig": {
     "access": "public"
   },
