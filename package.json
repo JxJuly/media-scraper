@@ -39,7 +39,6 @@
     "@types/xml2js": "^0.4.14",
     "eslint": "^9.23.0",
     "release-it": "^18.1.2",
-    "release-it-pnpm": "^4.6.4",
     "typescript": "^5.8.2",
     "vite": "^6.2.3",
     "vite-plugin-dts": "^4.5.3"

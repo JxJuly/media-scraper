@@ -1,7 +1,6 @@
 {
   "$schema": "https://unpkg.com/release-it@18/schema/release-it.json",
   "plugins": {
-    "release-it-pnpm": {},
     "@release-it/conventional-changelog": {
       "infile": "CHANGELOG.md",
       "header": "# Changelog | 变更日志",
