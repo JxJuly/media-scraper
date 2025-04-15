@@ -22,7 +22,7 @@
   "module": "./libs/scraper.js",
   "scripts": {
     "build": "vite build",
-    "release": "release-it --ci --verbose --dry-run"
+    "release": "release-it --ci --verbose"
   },
   "dependencies": {
     "axios": "^1.8.4",
