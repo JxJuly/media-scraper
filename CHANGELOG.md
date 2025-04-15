@@ -1,5 +1,13 @@
 # Changelog | 变更日志
 
+## [0.1.2](https://github.com/JxJuly/media-scraper/compare/0.1.1...0.1.2) (2025-04-15)
+
+### 🐛 Bug Fixes | Bug 修复
+
+* script ([9aba364](https://github.com/JxJuly/media-scraper/commit/9aba364dd2d45e05077a4fe13261707efea8d1c3))
+* script ([f394f3c](https://github.com/JxJuly/media-scraper/commit/f394f3cca9618baed9e13507673f9c08f26ed545))
+* 增加发布日志 ([4209eda](https://github.com/JxJuly/media-scraper/commit/4209eda8ae42f8bc91937a6fc85d605dfe2b3aee))
+
 ## [0.1.1](https://github.com/JxJuly/media-scraper/compare/0.1.0...0.1.1) (2025-04-15)
 
 ### 🐛 Bug Fixes | Bug 修复
