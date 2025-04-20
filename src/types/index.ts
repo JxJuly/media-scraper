@@ -81,7 +81,6 @@ export type EpisodeMetaDataWithSeries = EpisodeMetaData & SeriesMetaData;
 
 export type MetaData = MovieMetaData | EpisodeMetaData | SeriesMetaData | EpisodeMetaDataWithSeries;
 
-
 /*************************************************************
  * 👇👇👇 通过路径解析得到的数据类型
  */
@@ -104,22 +103,23 @@ interface MatchCommonInfo {
 }
 export type MatchMovieInfo = MatchCommonInfo & {
   type: 'movie';
-}
+};
 export type MatchEpisodeInfo = MatchCommonInfo & {
   type: 'episode';
   season: string;
   episode: string;
   localSeriesMetaDataFilePath: string;
   localThumbImagePath: string;
-}
+};
 
 export type MatchInfo = MatchMovieInfo | MatchEpisodeInfo;
-
 
 /*************************************************************
  * 👇👇👇 工具类型
  */
 export type ErrorHandle<T> = [T] | [undefined, string];
+
+export type Reporter = (params: { msg: string; level: 'info' | 'success' | 'error' }) => void;
 
 /*************************************************************
  * 👇👇👇 插件接口
@@ -134,4 +134,3 @@ export interface ScrapePlugin {
    */
   scrape: (info: MatchInfo) => Promise<ErrorHandle<MetaData>>;
 }
-

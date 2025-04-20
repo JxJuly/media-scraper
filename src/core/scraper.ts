@@ -1,11 +1,11 @@
 import fs from 'fs';
 
-import { mergeWith, omit, pick } from 'lodash-es';
+import { mergeWith, omit, pick, noop } from 'lodash-es';
 import { Builder } from 'xml2js';
 
 import { logger, sleep, downloadImage } from '../utils';
 
-import type { ScrapePlugin, MetaData, MatchInfo } from '../types';
+import type { ScrapePlugin, MetaData, MatchInfo, Reporter, ErrorHandle } from '../types';
 
 import { Tool, Match } from '.';
 
@@ -29,11 +29,13 @@ interface ScraperConfig {
    * 使用的插件，优先级按照先后顺序决定
    */
   plugins: UsePlugin[];
+  reporter?: Reporter;
 }
 
 const DEFAULT_CONFIG: Omit<ScraperConfig, 'plugins'> = {
   mode: 'complete',
   downloadImage: false,
+  reporter: noop,
 };
 
 const isEmpty = (v: any) => {
@@ -67,6 +69,10 @@ class Scraper {
       ...DEFAULT_CONFIG,
       ...custom,
     };
+  }
+
+  get reporter() {
+    return this.config.reporter;
   }
 
   mergeMetaData<T extends MetaData>(local: T | undefined, remote: T) {
@@ -115,15 +121,15 @@ class Scraper {
     }
     const locaExist = fs.existsSync(localPostImagePath);
     if (locaExist && this.config.mode === 'complete') {
-      logger.info(`image is existed and skip download`);
+      this.reporter({ msg: `image is existed and skip download`, level: 'info' });
       return;
     }
     logger.info(`start download: ${url}`);
     const [, error] = await downloadImage(url, localPostImagePath);
     if (error) {
-      logger.error('image download failed: ', error);
+      this.reporter({ msg: `image download failed: ${error}`, level: 'error' });
     } else {
-      logger.info('image donwload finished!');
+      this.reporter({ msg: `image download success`, level: 'success' });
     }
   }
 
@@ -133,21 +139,22 @@ class Scraper {
     const localMetaData = await Tool.getLocalMetaData(info);
 
     const [metaData, error] = await this.scrape(info);
-    console.log(error, metaData);
     if (error || !metaData) {
+      this.reporter({ msg: error, level: 'error' });
       return;
     }
 
     const nextMetaData = this.mergeMetaData(localMetaData, metaData);
     await this.saveMetaData(info, nextMetaData);
-    logger.info('done.');
+    this.reporter({ msg: 'done.', level: 'info' });
   }
 
-  private async scrape(info: MatchInfo) {
+  private async scrape(info: MatchInfo): Promise<ErrorHandle<MetaData>> {
     let temp: undefined | MetaData = undefined;
     for (const plugin of this.config.plugins) {
       const [metaData, error] = await plugin.use.scrape(info);
       if (error || !metaData) {
+        this.reporter({ msg: error, level: 'error' });
         continue;
       }
       Object.entries(metaData).forEach(([key, value]) => {
