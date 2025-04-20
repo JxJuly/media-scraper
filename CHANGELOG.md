@@ -1,5 +1,11 @@
 # Changelog | 变更日志
 
+## [0.2.0](https://github.com/JxJuly/media-scraper/compare/0.1.3...0.2.0) (2025-04-20)
+
+### 🌟 Features | 新功能
+
+* 新增 reporter 方便日志输出 ([a937920](https://github.com/JxJuly/media-scraper/commit/a9379203f3de5997d0f4c5c2f2e56550f021b8a1))
+
 ## [0.1.3](https://github.com/JxJuly/media-scraper/compare/0.1.2...0.1.3) (2025-04-15)
 
 ### 🐛 Bug Fixes | Bug 修复
