@@ -1,5 +1,11 @@
 # Changelog | 变更日志
 
+## [0.3.0](https://github.com/JxJuly/media-scraper/compare/0.2.0...0.3.0) (2025-04-30)
+
+### 🌟 Features | 新功能
+
+* 更改了导出方式 ([e2afb2e](https://github.com/JxJuly/media-scraper/commit/e2afb2e86861af42b9bfb9d8aa7b966b727a7db2))
+
 ## [0.2.0](https://github.com/JxJuly/media-scraper/compare/0.1.3...0.2.0) (2025-04-20)
 
 ### 🌟 Features | 新功能
