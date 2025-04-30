@@ -1,6 +1,6 @@
 # @july_cm/media-scraper | 媒体刮削器
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![codecov](https://codecov.io/gh/JxJuly/scrape-helper/branch/main/graph/badge.svg)](https://codecov.io/gh/JxJuly/scrape-helper)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![codecov](https://codecov.io/gh/JxJuly/media-scraper/graph/badge.svg?token=5IBKF37QBC)](https://codecov.io/gh/JxJuly/media-scraper)
 
 使用 Emby 或 Jellyfin 构建家庭影院遇到不少刮削相关的问题，本工具旨在对常规刮削工具的刮削能力的补充。
 
