@@ -1,6 +1,6 @@
 import { posix as path } from 'path';
 
-import type { MatchInfo } from 'types';
+import type { MatchInfo } from '../types';
 const META_DATA_EXTENSION = '.nfo';
 const POSTER_IMAGE_EXTENSION = '.jpg';
 const MOVIE_POSTER_IMAGE = 'poster.jpg';

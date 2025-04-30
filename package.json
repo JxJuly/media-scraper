@@ -12,16 +12,23 @@
   ],
   "exports": {
     ".": {
-      "types": "./libs/index.d.ts",
-      "require": "./libs/scraper.cjs",
-      "import": "./libs/scraper.js"
+      "types": "./libs/types/index.d.ts",
+      "require": "./libs/main/index.js",
+      "import": "./libs/main/index.js"
+    },
+    "./plugins": {
+      "types": "./libs/types/plugins/index.d.ts",
+      "require": "./libs/plugins/index.js",
+      "import": "./libs/plugins/index.js"
     }
   },
-  "types": "./libs/index.d.ts",
-  "main": "./libs/scraper.cjs",
-  "module": "./libs/scraper.js",
+  "types": "./libs/types/index.d.ts",
+  "main": "./libs/main/index.js",
+  "module": "./libs/main/index.js",
   "scripts": {
     "build": "vite build",
+    "test": "vitest",
+    "test:cov": "vitest run --coverage",
     "release": "release-it --ci --verbose"
   },
   "dependencies": {
@@ -37,10 +44,12 @@
     "@release-it/conventional-changelog": "^10.0.0",
     "@types/lodash-es": "^4.17.12",
     "@types/xml2js": "^0.4.14",
+    "@vitest/coverage-v8": "^3.1.2",
     "eslint": "^9.23.0",
     "release-it": "^18.1.2",
     "typescript": "^5.8.2",
     "vite": "^6.2.3",
-    "vite-plugin-dts": "^4.5.3"
+    "vite-plugin-dts": "^4.5.3",
+    "vitest": "^3.1.2"
   }
 }

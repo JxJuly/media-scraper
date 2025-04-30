@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { Logger, errorHandle } from '../utils';
+import { errorHandle } from '../core/utils';
 
 import type {
   ScrapePlugin,
@@ -27,7 +27,6 @@ interface TMDBScrapePluginConfig {
 class TMDBScrapePlugin implements ScrapePlugin {
   name = 'tmdb';
   fetch: AxiosInstance;
-  logger = new Logger(this.name);
 
   constructor(private config: TMDBScrapePluginConfig) {
     this.fetch = axios.create({
@@ -47,7 +46,6 @@ class TMDBScrapePlugin implements ScrapePlugin {
 
   async scrapeMovie(info: MatchMovieInfo): Promise<ErrorHandle<MovieMetaData>> {
     const name = info.title.normalize('NFC');
-    this.logger.info('start scrape movie', `name: ${name}`);
     const { data: searchList } = await this.fetch.get('search/movie', {
       params: {
         query: name,
@@ -56,7 +54,7 @@ class TMDBScrapePlugin implements ScrapePlugin {
       },
     });
     if (!searchList.results.length) {
-      return errorHandle(`${name} not found`, this.logger);
+      return errorHandle(`${name} not found`);
     }
     const source = searchList.results[0];
     const movieId = source.id;
@@ -75,12 +73,10 @@ class TMDBScrapePlugin implements ScrapePlugin {
         tmdbid: data.id,
       },
     };
-    this.logger.info(`scrape success ${data.title}`);
     return [metaData];
   }
 
   async scrapeEpisode(info: MatchEpisodeInfo): Promise<ErrorHandle<EpisodeMetaData>> {
-    this.logger.info(`start scrape episode: ${info.title}-${info.season}-${info.episode}`);
     const { data: searchList } = await this.fetch.get('search/tv', {
       params: {
         query: info.title.normalize('NFC'),
@@ -91,7 +87,7 @@ class TMDBScrapePlugin implements ScrapePlugin {
       },
     });
     if (!searchList.results.length) {
-      return errorHandle(`${info.title} not found`, this.logger);
+      return errorHandle(`${info.title} not found`);
     }
     const series = searchList.results[0];
     const season = Number(info.season);

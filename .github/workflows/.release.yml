@@ -37,6 +37,14 @@ jobs:
           version: 10
           run_install: |
             - args: [--frozen-lockfile]
+      
+      - name: test
+        run: pnpm run test:cov
+      
+      - name: upload codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: build
         run: pnpm run build

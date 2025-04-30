@@ -134,3 +134,37 @@ export interface ScrapePlugin {
    */
   scrape: (info: MatchInfo) => Promise<ErrorHandle<MetaData>>;
 }
+
+/**
+ * 附带参数的插件加载
+ */
+export interface UsePlugin {
+  use: ScrapePlugin;
+  pick?: string[];
+  omit?: string[];
+}
+
+/**
+ * 加载插件的类型
+ */
+export type LoadPlugin = ScrapePlugin | UsePlugin;
+
+/*************************************************************
+ * 👇👇👇 使用配置
+ */
+export interface ScraperConfig {
+  /**
+   * 使用的插件，优先级按照先后顺序决定
+   */
+  plugins: LoadPlugin[];
+  /**
+   * 运行的模式
+   * merge：合并已有数据，新数据优先级更高
+   * complete：补全已有数据
+   */
+  mode?: 'merge' | 'complete';
+  /** 是否要下载刮削的图片 */
+  downloadImage?: boolean;
+  /** 日志输出 */
+  reporter?: Reporter;
+}

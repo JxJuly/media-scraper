@@ -8,17 +8,28 @@ const config: UserConfig = {
   build: {
     target: 'esnext',
     lib: {
-      entry: './src/index.ts',
-      formats: ['cjs', 'es'],
-      fileName: 'scraper',
+      entry: {
+        main: './src/index.ts',
+        plugins: './src/plugins/index.ts',
+      },
+      formats: ['es'],
     },
     outDir: './libs',
     rollupOptions: {
       external: ['path', 'fs', 'stream/promises', ...Object.keys(pkg.dependencies)],
+      output: {
+        entryFileNames: '[name]/index.js',
+      },
     },
     minify: false,
   },
-  plugins: [dts()],
+  plugins: [
+    dts({
+      tsconfigPath: './tsconfig.build.json',
+      entryRoot: './src',
+      outDir: './libs/types',
+    }),
+  ],
 };
 
 export default config;

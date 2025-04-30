@@ -1,14 +1,13 @@
 import axios from 'axios';
 import { load } from 'cheerio';
 
-import { errorHandle, Logger } from '../utils';
+import { errorHandle } from '../core/utils';
 
+import type { ErrorHandle, MatchInfo, MetaData, MovieMetaData, ScrapePlugin } from '../types';
 import type { AxiosInstance } from 'axios';
-import type { ErrorHandle, MatchInfo, MetaData, MovieMetaData, ScrapePlugin } from 'types';
 
 class JAVDBScrapePlugin implements ScrapePlugin {
   name = 'javdb';
-  logger = new Logger(this.name);
   fetch: AxiosInstance;
 
   constructor() {
@@ -23,7 +22,7 @@ class JAVDBScrapePlugin implements ScrapePlugin {
   async scrape(info: MatchInfo): Promise<ErrorHandle<MetaData>> {
     const num = info.extra.num;
     if (!num) {
-      return errorHandle(`can not find number from ${info.title}`, this.logger);
+      return errorHandle(`can not find number from ${info.title}`);
     }
     const { data: listData } = await this.fetch('/search', {
       params: {
@@ -34,7 +33,7 @@ class JAVDBScrapePlugin implements ScrapePlugin {
     const listPageEl = load(listData);
     const itemsEl = listPageEl('.movie-list').children('.item');
     if (itemsEl.length === 0) {
-      return errorHandle(`${num} not found`, this.logger);
+      return errorHandle(`${num} not found`);
     }
     const itemEl = itemsEl.first();
     const anchor = itemEl.children('a').first();
@@ -83,7 +82,6 @@ class JAVDBScrapePlugin implements ScrapePlugin {
         role: 'AV 女优',
         type: 'Actor',
       }));
-    this.logger.info(`success: ${title}`);
 
     const metaData: MovieMetaData = {
       movie: {

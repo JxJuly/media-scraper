@@ -1,12 +1,12 @@
 {
-  "compilerOptions": {
-    "module": "ESNext",
-    "target": "ESNext",
-    "baseUrl": "./src",
-    "outDir": "./libs",
-    "declaration": true,
-    "moduleResolution": "bundler",
-    "esModuleInterop": true
-  },
-  "include": ["./src"]
+  "compilerOptions": {},
+  "exclude": ["**/*"],
+  "references": [
+    {
+      "path": "./tsconfig.build.json"
+    },
+    {
+      "path": "./tsconfig.misc.json"
+    }
+  ]
 }

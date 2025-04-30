@@ -1,5 +1,7 @@
 # @july_cm/media-scraper | 媒体刮削器
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![codecov](https://codecov.io/gh/JxJuly/scrape-helper/branch/main/graph/badge.svg)](https://codecov.io/gh/JxJuly/scrape-helper)
+
 使用 Emby 或 Jellyfin 构建家庭影院遇到不少刮削相关的问题，本工具旨在对常规刮削工具的刮削能力的补充。
 
 *如果你只是想快捷的刮削磁盘、NAS 中的媒体或者不知道本工具在做什么，那么你无需使用它。*

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { errorHandle, Logger } from '../utils';
+import { errorHandle } from '../core/utils';
 
 import type {
   EpisodeMetaDataWithSeries,
@@ -18,7 +18,6 @@ interface BangumiScrapePluginConfig {
 
 export class BangumiScrapePlugin implements ScrapePlugin {
   name = 'bangumi';
-  logger = new Logger(this.name);
   fetch: AxiosInstance;
 
   constructor(private config: BangumiScrapePluginConfig) {
@@ -40,7 +39,7 @@ export class BangumiScrapePlugin implements ScrapePlugin {
       },
     });
     if (!subjects.data?.length) {
-      return errorHandle(`${info.title} not found`, this.logger);
+      return errorHandle(`${info.title} not found`);
     }
     const subjectData = subjects.data[0];
     const studio = (subjectData.infobox || []).find((i) => i.key === '动画制作');

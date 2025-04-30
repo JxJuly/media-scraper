@@ -1,92 +1,29 @@
 import fs from 'fs';
 
-import { mergeWith, omit, pick, noop } from 'lodash-es';
+import { omit, pick, noop } from 'lodash-es';
 import { Builder } from 'xml2js';
 
-import { logger, sleep, downloadImage } from '../utils';
+import { meregMetaData, isUsePlugin, download, errorHandle, sleep } from './utils';
 
-import type { ScrapePlugin, MetaData, MatchInfo, Reporter, ErrorHandle } from '../types';
+import type { ScraperConfig, ScrapePlugin, MetaData, MatchInfo, ErrorHandle, UsePlugin } from '../types';
 
 import { Tool, Match } from '.';
 
-interface UsePlugin {
-  use: ScrapePlugin;
-  pick?: string[];
-  omit?: string[];
-}
-
-interface ScraperConfig {
-  /**
-   * 运行的模式
-   * cover：无论是否已有数据都直接覆盖
-   * merge：合并已有数据，新数据优先级更高
-   * complete：若数据存在，补全已有数据
-   */
-  mode: 'cover' | 'merge' | 'complete';
-  /** 是否要下载刮削的图片 */
-  downloadImage: boolean;
-  /**
-   * 使用的插件，优先级按照先后顺序决定
-   */
-  plugins: UsePlugin[];
-  reporter?: Reporter;
-}
-
-const DEFAULT_CONFIG: Omit<ScraperConfig, 'plugins'> = {
-  mode: 'complete',
-  downloadImage: false,
-  reporter: noop,
-};
-
-const isEmpty = (v: any) => {
-  if (v === undefined) {
-    return true;
-  }
-  if (Array.isArray(v)) {
-    return !!v.length;
-  }
-  return false;
-};
-
-const simgleMerge = <T>(a: T, b: T) => {
-  return mergeWith({} as T, a, b, (objValue, srcValue) => {
-    if (isEmpty(srcValue)) {
-      return objValue;
-    }
-    // 数组无需 merge
-    if (Array.isArray(objValue)) {
-      return srcValue;
-    }
-  });
-};
-
 class Scraper {
-  config: ScraperConfig;
+  config: Required<ScraperConfig>;
   builder = new Builder();
 
-  constructor(custom: Partial<Omit<ScraperConfig, 'plugins'>> & { plugins: UsePlugin[] }) {
+  constructor(custom: ScraperConfig) {
     this.config = {
-      ...DEFAULT_CONFIG,
+      mode: 'complete',
+      downloadImage: false,
+      reporter: noop,
       ...custom,
     };
   }
 
   get reporter() {
     return this.config.reporter;
-  }
-
-  mergeMetaData<T extends MetaData>(local: T | undefined, remote: T) {
-    let temp: T;
-    if (!local || this.config.mode === 'cover') {
-      temp = remote;
-    } else {
-      if (this.config.mode === 'merge') {
-        temp = simgleMerge(local, remote);
-      } else {
-        temp = simgleMerge(remote, local);
-      }
-    }
-    return temp;
   }
 
   async saveMetaData<T extends MetaData>(info: MatchInfo, metaData: T) {
@@ -97,7 +34,7 @@ class Scraper {
     if (info.type === 'movie' && Tool.isMovieMetaData(metaData)) {
       tryWriteMetaDataFile(info.localMetaDataFilePath, metaData);
       if (metaData.movie.thumb) {
-        await this.savePostImage(info.localPosterImagePath, metaData.movie.thumb);
+        await this.saveImage(info.localPosterImagePath, metaData.movie.thumb);
       }
       return;
     }
@@ -105,31 +42,35 @@ class Scraper {
       tryWriteMetaDataFile(info.localMetaDataFilePath, omit(metaData, 'tvshow'));
       tryWriteMetaDataFile(info.localSeriesMetaDataFilePath, omit(metaData, 'episodedetails'));
       if (metaData.tvshow.thumb) {
-        await this.savePostImage(info.localPosterImagePath, metaData.tvshow.thumb);
+        await this.saveImage(info.localPosterImagePath, metaData.tvshow.thumb);
         await sleep(2000);
       }
       if (metaData.episodedetails.thumb) {
-        await this.savePostImage(info.localThumbImagePath, metaData.episodedetails.thumb);
+        await this.saveImage(info.localThumbImagePath, metaData.episodedetails.thumb);
       }
       return;
     }
-    logger.error(`unkown type or metadata, info.type: ${info.type}`);
+    this.reporter({ msg: `未知的元数据类型：${info.type}`, level: 'error' });
   }
-  async savePostImage(localPostImagePath: string, url: string) {
+  async saveImage(localPostImagePath: string, url: string) {
     if (!this.config.downloadImage) {
       return;
     }
-    const locaExist = fs.existsSync(localPostImagePath);
-    if (locaExist && this.config.mode === 'complete') {
-      this.reporter({ msg: `image is existed and skip download`, level: 'info' });
+
+    if (fs.existsSync(localPostImagePath) && this.config.mode === 'complete') {
+      this.reporter({ msg: `文件已存在，跳过下载`, level: 'info' });
       return;
     }
-    logger.info(`start download: ${url}`);
-    const [, error] = await downloadImage(url, localPostImagePath);
+    this.reporter({ msg: `开始下载：${url}`, level: 'info' });
+    const [, error] = await download(url, localPostImagePath, {
+      onRetry(error, count) {
+        this.reporter({ msg: `正在第 ${count} 次下载重试`, level: 'error' });
+      },
+    });
     if (error) {
-      this.reporter({ msg: `image download failed: ${error}`, level: 'error' });
+      this.reporter({ msg: `下载失败: ${error}`, level: 'error' });
     } else {
-      this.reporter({ msg: `image download success`, level: 'success' });
+      this.reporter({ msg: `下载成功`, level: 'success' });
     }
   }
 
@@ -140,11 +81,16 @@ class Scraper {
 
     const [metaData, error] = await this.scrape(info);
     if (error || !metaData) {
-      this.reporter({ msg: error, level: 'error' });
+      this.reporter({ msg: error || '元数据为空！', level: 'error' });
       return;
     }
 
-    const nextMetaData = this.mergeMetaData(localMetaData, metaData);
+    /** 不同的模式决定不同的合并优先级 */
+    const nextMetaData =
+      this.config.mode === 'merge'
+        ? meregMetaData<MetaData>(localMetaData, metaData)
+        : meregMetaData<MetaData>(metaData, localMetaData);
+
     await this.saveMetaData(info, nextMetaData);
     this.reporter({ msg: 'done.', level: 'info' });
   }
@@ -152,24 +98,49 @@ class Scraper {
   private async scrape(info: MatchInfo): Promise<ErrorHandle<MetaData>> {
     let temp: undefined | MetaData = undefined;
     for (const plugin of this.config.plugins) {
-      const [metaData, error] = await plugin.use.scrape(info);
+      const [metaData, error] = isUsePlugin(plugin)
+        ? await this.runUsePlugin(plugin, info)
+        : await this.runPlugin(plugin, info);
+
       if (error || !metaData) {
         this.reporter({ msg: error, level: 'error' });
         continue;
       }
-      Object.entries(metaData).forEach(([key, value]) => {
-        if (temp === undefined) {
-          temp = {} as any;
-        }
-        if (plugin.pick) {
-          temp[key] = simgleMerge(temp[key], pick(value, plugin.pick));
-        } else if (plugin.omit) {
-          temp[key] = simgleMerge(temp[key], omit(value, plugin.omit));
-        } else {
-          temp[key] = simgleMerge(temp[key], value);
-        }
-      });
+      temp = meregMetaData(temp, metaData);
     }
+    return [temp];
+  }
+
+  private async runPlugin(plugin: ScrapePlugin, info: MatchInfo) {
+    try {
+      return await plugin.scrape(info);
+    } catch (e) {
+      return errorHandle(e);
+    }
+  }
+  private async runUsePlugin(plugin: UsePlugin, info: MatchInfo): Promise<ErrorHandle<MetaData>> {
+    const result = await this.runPlugin(plugin.use, info);
+    /** 异常情况 */
+    if (result[1] || !result[0]) {
+      return result;
+    }
+    /** 没有特殊配置 */
+    if (!plugin.omit && !plugin.omit) {
+      return result;
+    }
+    /** 基于配置做筛检 */
+    const temp = Object.entries(result[0]).reduce((prev, cur) => {
+      const [key, value] = cur;
+      let next = value;
+      if (plugin.pick) {
+        next = pick(value, plugin.pick);
+      }
+      if (plugin.omit) {
+        next = omit(value, plugin.omit);
+      }
+      prev[key] = next;
+      return prev;
+    }, {} as MetaData);
     return [temp];
   }
 }

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "rootDir": "./"
+  },
+  "include": ["tests"],
+  "references": [{
+    "path": "./tsconfig.build.json"
+  }]
+}
